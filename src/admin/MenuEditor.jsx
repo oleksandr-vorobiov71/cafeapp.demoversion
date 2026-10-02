@@ -35,6 +35,7 @@ export default function MenuEditor({ notify }) {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState(null) // null | 'new' | Gericht
+  const [catOpen, setCatOpen] = useState(false)
 
   const load = useCallback(async () => {
     const [c, i] = await Promise.all([
@@ -56,14 +57,13 @@ export default function MenuEditor({ notify }) {
     else if (okMsg) notify(okMsg)
   }
 
-  async function addCategory() {
-    const de = window.prompt('Name der neuen Kategorie (Deutsch):')?.trim()
-    if (!de) return
-    const en = window.prompt('Name der Kategorie (Englisch):', de)?.trim() || de
+  async function addCategory({ de, en }) {
     const sort_order = Math.max(0, ...categories.map((c) => c.sort_order)) + 1
-    const { error } = await supabase.from('categories').insert({ name_de: de, name_en: en, sort_order })
-    if (error) notify('Kategorie konnte nicht angelegt werden (Name schon vorhanden?).', 'err')
-    else { notify('Kategorie angelegt.'); load() }
+    const { error } = await supabase.from('categories').insert({ name_de: de, name_en: en || de, sort_order })
+    if (error) { notify('Kategorie konnte nicht angelegt werden (Name schon vorhanden?).', 'err'); return false }
+    notify('Kategorie angelegt.')
+    load()
+    return true
   }
 
   const q = search.trim().toLowerCase()
@@ -77,7 +77,7 @@ export default function MenuEditor({ notify }) {
         <input className={`${inputCls} flex-1 basis-48`} type="search" placeholder="Suchen …" value={search}
                onChange={(e) => setSearch(e.target.value)} />
         <button className={btnPrimary} onClick={() => setEditing('new')}>+ Neues Gericht</button>
-        <button className={btnGhost} onClick={addCategory}>+ Kategorie</button>
+        <button className={btnGhost} onClick={() => setCatOpen(true)}>+ Kategorie</button>
       </div>
 
       {categories.map((c) => {
@@ -113,6 +113,8 @@ export default function MenuEditor({ notify }) {
         )
       })}
 
+      {catOpen && <CategoryModal onClose={() => setCatOpen(false)} onSave={addCategory} />}
+
       {editing && (
         <ItemModal
           item={editing === 'new' ? null : editing}
@@ -124,5 +126,40 @@ export default function MenuEditor({ notify }) {
         />
       )}
     </section>
+  )
+}
+
+// Neue Kategorie: eigenes Fenster statt Browser-Prompt
+function CategoryModal({ onClose, onSave }) {
+  const [de, setDe] = useState('')
+  const [en, setEn] = useState('')
+  const [busy, setBusy] = useState(false)
+  async function submit(e) {
+    e.preventDefault()
+    if (!de.trim()) return
+    setBusy(true)
+    const ok = await onSave({ de: de.trim(), en: en.trim() })
+    setBusy(false)
+    if (ok) onClose()
+  }
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50 md:items-center"
+         onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}>
+      <form onSubmit={submit} className="w-full max-w-md space-y-4 rounded-t-2xl bg-white p-4 md:rounded-2xl">
+        <h2 className="text-xl font-extrabold">Neue Kategorie</h2>
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-stone-700">Name (Deutsch) *</span>
+          <input className={inputCls} autoFocus value={de} onChange={(e) => setDe(e.target.value)} placeholder="z. B. Frühstück" />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-stone-700">Name (Englisch)</span>
+          <input className={inputCls} value={en} onChange={(e) => setEn(e.target.value)} placeholder="leer = wie Deutsch" />
+        </label>
+        <div className="flex justify-end gap-2">
+          <button type="button" className={btnGhost} onClick={onClose} disabled={busy}>Abbrechen</button>
+          <button className={btnPrimary} disabled={busy || !de.trim()}>{busy ? 'Speichern …' : 'Anlegen'}</button>
+        </div>
+      </form>
+    </div>
   )
 }

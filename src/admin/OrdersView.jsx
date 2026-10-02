@@ -243,16 +243,16 @@ export default function OrdersView({ chime, onNewCount, notify }) {
     return orders.filter(o => o.status === 'completed' && new Date(o.created_at) >= new Date(startOfToday()))
   }, [orders])
 
+  // Umsatz = nur Speisen & Getränke. Trinkgeld ist KEIN Umsatz und wird separat gezeigt.
+  const itemsTotal = (o) =>
+    (o.order_items || []).reduce((s, it) => s + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0)
+
   const totalRevenue = useMemo(() => {
-    return todayOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0)
+    return todayOrders.reduce((sum, o) => sum + itemsTotal(o), 0)
   }, [todayOrders])
 
   const totalTips = useMemo(() => {
-    return todayOrders.reduce((sum, o) => {
-      const itemsSum = (o.order_items || []).reduce((s, it) => s + (Number(it.price) || 0) * (it.quantity || 1), 0)
-      const tip = Math.max(0, Number(o.total_amount || 0) - itemsSum)
-      return sum + tip
-    }, 0)
+    return todayOrders.reduce((sum, o) => sum + Math.max(0, Number(o.total_amount || 0) - itemsTotal(o)), 0)
   }, [todayOrders])
 
   const activeTablesSet = useMemo(() => {
@@ -285,13 +285,13 @@ export default function OrdersView({ chime, onNewCount, notify }) {
     <section className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         <div className="rounded-3xl border border-stone-200/80 bg-white p-4 shadow-2xs">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-stone-400">Umsatz heute</div>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-stone-400">Umsatz heute <span className="normal-case tracking-normal">(ohne Trinkgeld)</span></div>
           <div className="text-2xl font-black text-stone-900 mt-0.5">{totalRevenue.toFixed(2).replace('.', ',')} €</div>
         </div>
         
         <div className="rounded-3xl border border-stone-200/80 bg-white p-4 shadow-2xs">
           <div className="text-[11px] font-bold uppercase tracking-wider text-stone-400">Ausgegeben</div>
-          <div className="text-2xl font-black text-stone-900 mt-0.5">{todayOrders.length} Bestellungen</div>
+          <div className="text-2xl font-black text-stone-900 mt-0.5">{todayOrders.length} {todayOrders.length === 1 ? 'Bestellung' : 'Bestellungen'}</div>
         </div>
 
         <div className="rounded-3xl border border-emerald-200/80 bg-emerald-50/40 p-4 shadow-2xs">
