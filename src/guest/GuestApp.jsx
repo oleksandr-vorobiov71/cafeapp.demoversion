@@ -136,7 +136,7 @@ const TAGS = {
 
 const TEXTS = {
   de: {
-    table: 'Tisch', chooseTable: 'Tisch wählen', close: 'Schließen', change: 'Ändern',
+    table: 'Tisch', chooseTable: 'Tisch wählen', tableHint: 'Die Nummer finden Sie auf Ihrem Tisch.', close: 'Schließen', change: 'Ändern',
     forTable: 'Bestellung für', items: 'Positionen', viewOrder: 'Bestellung ansehen',
     summary: 'Ihre Bestellung', tipQ: 'Trinkgeld für das Team?', noTip: 'Ohne',
     split: 'Rechnung teilen', splitAlone: '1 (Allein)', perPerson: 'Pro Person',
@@ -149,7 +149,7 @@ const TEXTS = {
     thankDesc: (t, n) => `Ihre Bestellung${n ? ` #${n}` : ''} für Tisch ${t} ist eingegangen und wird zubereitet.`,
   },
   en: {
-    table: 'Table', chooseTable: 'Select table', close: 'Close', change: 'Change',
+    table: 'Table', chooseTable: 'Select your table', tableHint: 'You’ll find the number on your table.', close: 'Close', change: 'Change',
     forTable: 'Order for', items: 'items', viewOrder: 'View order',
     summary: 'Your order', tipQ: 'Add a tip for the team?', noTip: 'None',
     split: 'Split the bill', splitAlone: '1 (Single)', perPerson: 'Per person',
@@ -162,7 +162,7 @@ const TEXTS = {
     thankDesc: (t, n) => `Your order${n ? ` #${n}` : ''} for table ${t} was received and is being prepared.`,
   },
   ua: {
-    table: 'Столик', chooseTable: 'Оберіть столик', close: 'Закрити', change: 'Змінити',
+    table: 'Столик', chooseTable: 'Оберіть столик', tableHint: 'Номер вказано на вашому столику.', close: 'Закрити', change: 'Змінити',
     forTable: 'Замовлення для', items: 'позицій', viewOrder: 'Переглянути замовлення',
     summary: 'Ваше замовлення', tipQ: 'Чайові для команди?', noTip: 'Без',
     split: 'Розділити рахунок', splitAlone: '1 (один)', perPerson: 'З особи',
@@ -175,7 +175,7 @@ const TEXTS = {
     thankDesc: (t, n) => `Замовлення${n ? ` №${n}` : ''} для столика ${t} прийнято й уже готується.`,
   },
   it: {
-    table: 'Tavolo', chooseTable: 'Scegli il tavolo', close: 'Chiudi', change: 'Cambia',
+    table: 'Tavolo', chooseTable: 'Scegli il tavolo', tableHint: 'Il numero è indicato sul tuo tavolo.', close: 'Chiudi', change: 'Cambia',
     forTable: 'Ordine per', items: 'articoli', viewOrder: 'Vedi ordine',
     summary: 'Il tuo ordine', tipQ: 'Una mancia per il team?', noTip: 'No',
     split: 'Dividi il conto', splitAlone: '1 (solo)', perPerson: 'A persona',
@@ -201,6 +201,105 @@ const chipCls = (on) =>
   `rounded-2xl border p-3 text-xs font-bold transition ${on ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 text-stone-700 bg-stone-50'}`
 
 /* ------------------------------------------------------------------ */
+
+/* Kleine Animationen (respektiert „Bewegung reduzieren“ in den Systemeinstellungen) */
+const GUEST_CSS = `
+@keyframes ga-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes ga-sheet { from { opacity: 0; transform: translateY(32px) } to { opacity: 1; transform: none } }
+@keyframes ga-pop { 0% { transform: scale(1) } 35% { transform: scale(.82) } 70% { transform: scale(1.08) } 100% { transform: scale(1) } }
+@keyframes ga-badge { from { opacity: 0; transform: scale(.4) } to { opacity: 1; transform: scale(1) } }
+.ga-backdrop { animation: ga-fade .2s ease-out both }
+.ga-sheet { animation: ga-sheet .32s cubic-bezier(.2,.9,.25,1) both }
+.ga-pop { animation: ga-pop .35s ease-out }
+.ga-badge { animation: ga-badge .25s cubic-bezier(.2,.9,.25,1.3) both }
+@media (prefers-reduced-motion: reduce) {
+  .ga-backdrop, .ga-sheet, .ga-pop, .ga-badge { animation: none }
+}`
+
+const PlusIcon = ({ className = 'h-4 w-4' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+)
+const CloseIcon = ({ className = 'h-4 w-4' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+)
+
+// Runder Schließen-Knopf für alle Fenster
+const CloseButton = ({ onClick, label }) => (
+  <button type="button" onClick={onClick} aria-label={label}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-600 transition hover:bg-stone-200 active:scale-90">
+    <CloseIcon />
+  </button>
+)
+
+// Hinzufügen-Knopf: sauber zentriertes Plus, Wipp-Animation beim Antippen,
+// Zähler-Badge, wenn das Gericht schon im Warenkorb ist.
+function AddButton({ available, count, label, onClick }) {
+  const [pops, setPops] = useState(0)
+  return (
+    <button
+      type="button"
+      disabled={!available}
+      aria-label={label}
+      onClick={(e) => { e.stopPropagation(); if (!available) return; setPops((n) => n + 1); onClick() }}
+      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ${
+        available
+          ? 'bg-stone-900 text-white shadow-[0_6px_16px_-6px_rgba(28,25,23,0.6)] hover:bg-amber-900'
+          : 'bg-stone-100 text-stone-300'
+      }`}
+    >
+      <span key={pops} className={pops ? 'ga-pop flex' : 'flex'}>
+        {available ? <PlusIcon className="h-5 w-5" /> : <CloseIcon className="h-4 w-4" />}
+      </span>
+      {count > 0 && (
+        <span key={`b${count}`}
+              className="ga-badge absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black text-stone-900 ring-2 ring-white">
+          {count}
+        </span>
+      )}
+    </button>
+  )
+}
+
+// Tisch wählen: Bottom-Sheet mit Animation, Schließen per X oder Tippen daneben
+function TablePicker({ tableCount, current, t, onPick, onClose }) {
+  const [picked, setPicked] = useState(current)
+  function choose(num) {
+    setPicked(String(num))
+    setTimeout(() => onPick(String(num)), 180) // kurz die Auswahl zeigen, dann schließen
+  }
+  return (
+    <div className="ga-backdrop fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-3 backdrop-blur-xs sm:items-center"
+         onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="ga-sheet w-full max-w-md rounded-[28px] bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl">
+        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-stone-200 sm:hidden" />
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h4 className="text-lg font-black text-stone-900">🪑 {t.chooseTable}</h4>
+            <p className="mt-0.5 text-xs font-medium text-stone-500">{t.tableHint}</p>
+          </div>
+          <CloseButton onClick={onClose} label={t.close} />
+        </div>
+        <div className="grid max-h-[50vh] grid-cols-4 gap-2.5 overflow-y-auto p-0.5">
+          {Array.from({ length: tableCount }, (_, i) => i + 1).map((num) => {
+            const on = picked === String(num)
+            return (
+              <button key={num} type="button" onClick={() => choose(num)}
+                      className={`aspect-square rounded-2xl text-lg font-black transition-all duration-200 active:scale-90 ${
+                        on ? 'scale-105 bg-stone-900 text-white shadow-lg' : 'bg-stone-100 text-stone-800 hover:bg-stone-200'
+                      }`}>
+                {num}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function Allergens({ item, lang, t }) {
   const tags = (item.tags || []).filter((x) => TAGS[x])
@@ -308,6 +407,7 @@ export default function GuestApp() {
   }
 
   const cartCount = cart.reduce((s, l) => s + l.qty, 0)
+  const countById = cart.reduce((m, l) => ({ ...m, [l.itemId]: (m[l.itemId] || 0) + l.qty }), {})
   const subtotal = round2(cart.reduce((s, l) => s + unitPrice(l) * l.qty, 0))
   const tipAmount = tipOption.type === 'percent'
     ? round2((subtotal * tipOption.value) / 100)
@@ -386,6 +486,7 @@ export default function GuestApp() {
 
   return (
     <div className="min-h-screen bg-[#fcf9f5] pb-32 font-sans text-stone-800 antialiased selection:bg-amber-100">
+      <style>{GUEST_CSS}</style>
 
       {/* Kopfzeile */}
       <header className="sticky top-0 z-30 border-b border-amber-900/5 bg-[#fcf9f5]/90 backdrop-blur-md">
@@ -488,16 +589,12 @@ export default function GuestApp() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    disabled={!available}
-                    aria-label={`${name} ${t.add}`}
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold shadow-sm transition-all duration-200 ${
-                      available ? 'bg-amber-950 text-white hover:bg-stone-900' : 'bg-stone-200 text-stone-400'
-                    }`}
-                  >
-                    <span className="text-base leading-none font-bold">{available ? '+' : '✕'}</span>
-                  </button>
+                  <AddButton
+                    available={available}
+                    count={countById[item.id] || 0}
+                    label={`${name} ${t.add}`}
+                    onClick={() => openItem(item)}
+                  />
                 </div>
               )
             })}
@@ -532,11 +629,16 @@ export default function GuestApp() {
 
       {/* Getränk anpassen */}
       {modalItem && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-xs"
+        <div className="ga-backdrop fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 backdrop-blur-xs sm:items-center"
              onMouseDown={(e) => e.target === e.currentTarget && setModalItem(null)}>
-          <div className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-black text-stone-900">{pick(modalItem, 'name', lang)}</h3>
-            <p className="text-xs text-stone-500">{t.customize}</p>
+          <div className="ga-sheet w-full max-w-md rounded-[28px] bg-white p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black text-stone-900">{pick(modalItem, 'name', lang)}</h3>
+                <p className="text-xs text-stone-500">{t.customize}</p>
+              </div>
+              <CloseButton onClick={() => setModalItem(null)} label={t.close} />
+            </div>
             <Allergens item={modalItem} lang={lang} t={t} />
 
             {optionGroupsFor(modalItem).map((g) => {
@@ -576,12 +678,12 @@ export default function GuestApp() {
 
       {/* Bestellübersicht */}
       {isCheckoutOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl max-h-[92vh] flex flex-col">
+        <div className="ga-backdrop fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 backdrop-blur-xs sm:items-center"
+             onMouseDown={(e) => e.target === e.currentTarget && setIsCheckoutOpen(false)}>
+          <div className="ga-sheet w-full max-w-md rounded-[28px] bg-white p-5 shadow-2xl max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-stone-100">
               <h3 className="text-lg font-black text-stone-900">{t.summary}</h3>
-              <button onClick={() => setIsCheckoutOpen(false)} aria-label={t.close}
-                      className="text-stone-400 hover:text-stone-700 font-bold text-lg p-1">✕</button>
+              <CloseButton onClick={() => setIsCheckoutOpen(false)} label={t.close} />
             </div>
 
             <div className="overflow-y-auto">
@@ -695,29 +797,19 @@ export default function GuestApp() {
 
       {/* Tisch wählen (nur ohne QR-Code) */}
       {isChangingTable && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-xs rounded-3xl bg-white p-5 shadow-2xl text-center">
-            <h4 className="font-extrabold text-stone-900 mb-2">{t.chooseTable}</h4>
-            <div className="grid grid-cols-4 gap-2 my-4 max-h-72 overflow-y-auto">
-              {Array.from({ length: tableCount }, (_, i) => i + 1).map((num) => (
-                <button key={num} type="button"
-                        onClick={() => { setTable(String(num)); setIsChangingTable(false) }}
-                        className={`rounded-2xl py-2.5 font-black transition ${table === String(num) ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-800 hover:bg-stone-200'}`}>
-                  {num}
-                </button>
-              ))}
-            </div>
-            <button type="button" onClick={() => setIsChangingTable(false)} className="text-xs text-stone-500 underline">
-              {t.close}
-            </button>
-          </div>
-        </div>
+        <TablePicker
+          tableCount={tableCount}
+          current={table}
+          t={t}
+          onPick={(num) => { setTable(num); setIsChangingTable(false) }}
+          onClose={() => setIsChangingTable(false)}
+        />
       )}
 
       {/* Bestellung gesendet */}
       {sentOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
+        <div className="ga-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="ga-sheet w-full max-w-sm rounded-[28px] bg-white p-6 text-center shadow-2xl">
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-800">✓</div>
             <h3 className="text-lg font-black text-stone-900">{t.thankTitle}</h3>
             <p className="mt-1 text-xs text-stone-500 font-medium">{t.thankDesc(table, sentOrder.number)}</p>
