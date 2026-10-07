@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { btnPrimary, inputCls, Switch } from './ui'
+import { btnPrimary, btnGhost, inputCls, Switch } from './ui'
+import QrCodes from './QrCodes'
 
 export default function SettingsView({ notify }) {
   const [s, setS] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [showQr, setShowQr] = useState(false)
 
   useEffect(() => {
     supabase.from('cafe_settings').select('*').eq('id', 1).single().then(({ data, error }) => {
@@ -62,6 +64,24 @@ export default function SettingsView({ notify }) {
           <input className={inputCls} type="number" min="1" max="200" inputMode="numeric" value={s.table_count} onChange={(e) => set('table_count', e.target.value)} /></label>
         <button className={`${btnPrimary} w-full`} disabled={busy}>{busy ? 'Speichern …' : 'Speichern'}</button>
       </div>
+
+      <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+        <div>
+          <div className="font-bold">QR-Codes für die Tische</div>
+          <div className="text-sm text-stone-500">Ein Code pro Tisch – ausdrucken und auf die Tische stellen. Gäste landen direkt am richtigen Tisch.</div>
+        </div>
+        <button type="button" className={`${btnGhost} w-full`} onClick={() => setShowQr(true)}>
+          QR-Codes anzeigen &amp; drucken
+        </button>
+      </div>
+
+      {showQr && (
+        <QrCodes
+          tableCount={Math.min(200, Math.max(1, Number(s.table_count) || 1))}
+          cafeName={(s.cafe_name || '').trim() || 'Café am Rathaus'}
+          onClose={() => setShowQr(false)}
+        />
+      )}
     </form>
   )
 }
