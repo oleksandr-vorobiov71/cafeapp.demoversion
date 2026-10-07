@@ -136,6 +136,7 @@ const TAGS = {
 
 const TEXTS = {
   de: {
+    service: 'Service', serviceTitle: 'Wie können wir helfen?', callWaiter: 'Bedienung rufen', callWaiterSub: 'Jemand kommt an Ihren Tisch.', askBill: 'Rechnung bitte', askBillSub: 'Wir bringen Ihnen die Rechnung.', called: 'Ist unterwegs!', calledDesc: (t) => `Unser Team weiß Bescheid und kommt gleich zu Tisch ${t}.`,
     table: 'Tisch', chooseTable: 'Tisch wählen', tableHint: 'Die Nummer finden Sie auf Ihrem Tisch.', close: 'Schließen', change: 'Ändern',
     forTable: 'Bestellung für', items: 'Positionen', viewOrder: 'Bestellung ansehen',
     summary: 'Ihre Bestellung', tipQ: 'Trinkgeld für das Team?', noTip: 'Ohne',
@@ -149,6 +150,7 @@ const TEXTS = {
     thankDesc: (t, n) => `Ihre Bestellung${n ? ` #${n}` : ''} für Tisch ${t} ist eingegangen und wird zubereitet.`,
   },
   en: {
+    service: 'Service', serviceTitle: 'How can we help?', callWaiter: 'Call staff', callWaiterSub: 'Someone will come to your table.', askBill: 'Bill, please', askBillSub: 'We’ll bring you the bill.', called: 'On the way!', calledDesc: (t) => `Our team has been notified and will come to table ${t} shortly.`,
     table: 'Table', chooseTable: 'Select your table', tableHint: 'You’ll find the number on your table.', close: 'Close', change: 'Change',
     forTable: 'Order for', items: 'items', viewOrder: 'View order',
     summary: 'Your order', tipQ: 'Add a tip for the team?', noTip: 'None',
@@ -162,6 +164,7 @@ const TEXTS = {
     thankDesc: (t, n) => `Your order${n ? ` #${n}` : ''} for table ${t} was received and is being prepared.`,
   },
   ua: {
+    service: 'Сервіс', serviceTitle: 'Чим можемо допомогти?', callWaiter: 'Покликати офіціанта', callWaiterSub: 'Хтось підійде до вашого столика.', askBill: 'Рахунок, будь ласка', askBillSub: 'Ми принесемо вам рахунок.', called: 'Вже йдемо!', calledDesc: (t) => `Команда отримала сигнал і скоро підійде до столика ${t}.`,
     table: 'Столик', chooseTable: 'Оберіть столик', tableHint: 'Номер вказано на вашому столику.', close: 'Закрити', change: 'Змінити',
     forTable: 'Замовлення для', items: 'позицій', viewOrder: 'Переглянути замовлення',
     summary: 'Ваше замовлення', tipQ: 'Чайові для команди?', noTip: 'Без',
@@ -175,6 +178,7 @@ const TEXTS = {
     thankDesc: (t, n) => `Замовлення${n ? ` №${n}` : ''} для столика ${t} прийнято й уже готується.`,
   },
   it: {
+    service: 'Servizio', serviceTitle: 'Come possiamo aiutarti?', callWaiter: 'Chiama il personale', callWaiterSub: 'Qualcuno verrà al tuo tavolo.', askBill: 'Il conto, per favore', askBillSub: 'Ti portiamo il conto.', called: 'Arriviamo!', calledDesc: (t) => `Il team è stato avvisato e arriverà presto al tavolo ${t}.`,
     table: 'Tavolo', chooseTable: 'Scegli il tavolo', tableHint: 'Il numero è indicato sul tuo tavolo.', close: 'Chiudi', change: 'Cambia',
     forTable: 'Ordine per', items: 'articoli', viewOrder: 'Vedi ordine',
     summary: 'Il tuo ordine', tipQ: 'Una mancia per il team?', noTip: 'No',
@@ -224,6 +228,22 @@ const PlusIcon = ({ className = 'h-4 w-4' }) => (
 const CloseIcon = ({ className = 'h-4 w-4' }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
     <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+)
+
+const BellIcon = ({ className = 'h-5 w-5' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+  </svg>
+)
+const UserIcon = ({ className = 'h-6 w-6' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
+  </svg>
+)
+const ReceiptIcon = ({ className = 'h-6 w-6' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 2v20l3-2 3 2 2-2 2 2 3-2 3 2V2l-3 2-3-2-2 2-2-2-3 2Z" /><path d="M8 8h8M8 12h8M8 16h5" />
   </svg>
 )
 
@@ -351,6 +371,10 @@ export default function GuestApp() {
   const [sendError, setSendError] = useState('')
   const [sentOrder, setSentOrder] = useState(null) // { number }
   const [toast, setToast] = useState('')
+  const [serviceOpen, setServiceOpen] = useState(false)
+  const [serviceBusy, setServiceBusy] = useState(false)
+  const [serviceSent, setServiceSent] = useState(false)
+  const [serviceError, setServiceError] = useState('')
   const toastTimer = useRef(null)
 
   const brand = settings?.cafe_name || 'Café am Rathaus'
@@ -461,6 +485,31 @@ export default function GuestApp() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // „Bedienung rufen" / „Rechnung bitte" – landet live in der Verwaltung
+  async function callService(kind) {
+    if (serviceBusy) return
+    setServiceBusy(true)
+    setServiceError('')
+    const { error } = await supabase
+      .from('service_calls')
+      .insert({ table_number: parseInt(table, 10) || 1, kind })
+    setServiceBusy(false)
+    // 23505 = für diesen Tisch läuft schon ein Ruf → für den Gast trotzdem „unterwegs"
+    if (error && error.code !== '23505') {
+      console.error(error)
+      const offline = !navigator.onLine || /fetch|network/i.test(error.message || '')
+      setServiceError(orderErrorText({ code: offline ? 'NETWORK' : 'UNKNOWN' }, lang))
+      return
+    }
+    setServiceSent(true)
+  }
+
+  function closeService() {
+    setServiceOpen(false)
+    setServiceSent(false)
+    setServiceError('')
   }
 
   /* ---------- Render ---------- */
@@ -608,6 +657,16 @@ export default function GuestApp() {
           {toast}
         </div>
       )}
+
+      {/* Service-Knopf (Bedienung / Rechnung) */}
+      <button
+        type="button"
+        onClick={() => setServiceOpen(true)}
+        className={`fixed right-4 z-40 flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-extrabold text-stone-900 shadow-[0_10px_30px_-8px_rgba(28,25,23,0.45)] border border-stone-200 active:scale-95 transition ${cart.length > 0 ? 'bottom-28' : 'bottom-6'}`}
+      >
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-stone-900"><BellIcon className="h-4 w-4" /></span>
+        {t.service}
+      </button>
 
       {/* Warenkorb-Leiste */}
       {cart.length > 0 && (
@@ -804,6 +863,50 @@ export default function GuestApp() {
           onPick={(num) => { setTable(num); setIsChangingTable(false) }}
           onClose={() => setIsChangingTable(false)}
         />
+      )}
+
+      {/* Service-Fenster */}
+      {serviceOpen && (
+        <div className="ga-backdrop fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-3 backdrop-blur-xs sm:items-center"
+             onMouseDown={(e) => e.target === e.currentTarget && closeService()}>
+          <div className="ga-sheet w-full max-w-md rounded-[28px] bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl">
+            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-stone-200 sm:hidden" />
+            {serviceSent ? (
+              <div className="py-4 text-center">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-800">✓</div>
+                <h3 className="text-lg font-black text-stone-900">{t.called}</h3>
+                <p className="mt-1 text-sm font-medium text-stone-500">{t.calledDesc(table)}</p>
+                <button type="button" onClick={closeService}
+                        className="mt-5 w-full rounded-2xl bg-stone-900 py-3 text-sm font-bold text-white active:scale-95 transition">
+                  {t.done}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-black text-stone-900">{t.serviceTitle}</h3>
+                    <p className="mt-0.5 text-xs font-medium text-stone-500">{t.table} {table}</p>
+                  </div>
+                  <CloseButton onClick={closeService} label={t.close} />
+                </div>
+                <div className="grid gap-3">
+                  {[['waiter', UserIcon, t.callWaiter, t.callWaiterSub], ['bill', ReceiptIcon, t.askBill, t.askBillSub]].map(([kind, Icon, title, sub]) => (
+                    <button key={kind} type="button" disabled={serviceBusy} onClick={() => callService(kind)}
+                            className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-left transition hover:bg-stone-100 active:scale-[0.98] disabled:opacity-60">
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-stone-900"><Icon /></span>
+                      <span>
+                        <span className="block text-base font-extrabold text-stone-900">{title}</span>
+                        <span className="block text-xs font-medium text-stone-500">{sub}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {serviceError && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800">{serviceError}</p>}
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Bestellung gesendet */}

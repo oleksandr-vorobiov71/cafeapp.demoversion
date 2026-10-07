@@ -150,6 +150,72 @@ function OrderCard({ o, now, onStatus }) {
   )
 }
 
+// Rufe der Gäste: „Bedienung rufen" / „Rechnung bitte"
+const CALL = {
+  waiter: { label: 'Bedienung gerufen', icon: '🙋' },
+  bill: { label: 'Möchte zahlen', icon: '💶' },
+}
+
+function ServiceCalls({ chime, notify }) {
+  const [calls, setCalls] = useState([])
+  const [now, setNow] = useState(Date.now())
+  const known = useRef(null)
+
+  const load = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('service_calls')
+      .select('*')
+      .is('resolved_at', null)
+      .order('created_at', { ascending: true })
+    if (error) { console.error('Rufe laden fehlgeschlagen', error); return }
+    const fresh = (data || []).filter((c) => known.current && !known.current.has(c.id))
+    known.current = new Set((data || []).map((c) => c.id))
+    setCalls(data || [])
+    if (fresh.length && chime) chime()
+  }, [chime])
+
+  useEffect(() => {
+    load()
+    const channel = supabase
+      .channel('service-calls-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'service_calls' }, () => load())
+      .subscribe()
+    const poll = setInterval(load, 20000)
+    const tick = setInterval(() => setNow(Date.now()), 15000)
+    return () => { supabase.removeChannel(channel); clearInterval(poll); clearInterval(tick) }
+  }, [load])
+
+  async function resolve(id) {
+    const prev = calls
+    setCalls((list) => list.filter((c) => c.id !== id))
+    const { error } = await supabase.from('service_calls').update({ resolved_at: new Date().toISOString() }).eq('id', id)
+    if (error) { setCalls(prev); if (notify) notify('Konnte nicht als erledigt markiert werden.', 'err') }
+  }
+
+  if (!calls.length) return null
+  return (
+    <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+      {calls.map((c) => {
+        const mins = Math.max(0, Math.floor((now - new Date(c.created_at)) / 60000))
+        const meta = CALL[c.kind] || CALL.waiter
+        return (
+          <div key={c.id} className="flex items-center gap-3 rounded-3xl border-2 border-amber-500 bg-amber-50 p-4 shadow-sm ring-4 ring-amber-200/60 animate-pulse [animation-duration:2.5s]">
+            <span className="text-3xl" aria-hidden="true">{meta.icon}</span>
+            <div className="min-w-0 flex-1">
+              <div className="text-xl font-black leading-tight text-stone-900">Tisch {c.table_number}</div>
+              <div className="text-sm font-bold text-amber-900">{meta.label} · vor {mins} Min.</div>
+            </div>
+            <button type="button" onClick={() => resolve(c.id)}
+                    className="min-h-11 rounded-xl bg-stone-900 px-4 text-sm font-bold text-white active:scale-95">
+              Erledigt
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function OrdersView({ chime, onNewCount, notify }) {
   const [orders, setOrders] = useState([])
   const [filter, setFilter] = useState('active')
@@ -283,6 +349,7 @@ export default function OrdersView({ chime, onNewCount, notify }) {
 
   return (
     <section className="space-y-4">
+      <ServiceCalls chime={chime} notify={notify} />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         <div className="rounded-3xl border border-stone-200/80 bg-white p-4 shadow-2xs">
           <div className="text-[11px] font-bold uppercase tracking-wider text-stone-400">Umsatz heute <span className="normal-case tracking-normal">(ohne Trinkgeld)</span></div>
