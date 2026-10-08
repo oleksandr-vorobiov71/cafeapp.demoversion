@@ -34,6 +34,7 @@ export default function SettingsView({ notify }) {
     const nz = (v) => (v || '').trim() || null
     const { error } = await supabase.from('cafe_settings').update({
       cafe_name: (s.cafe_name || '').trim() || 'Café am Rathaus',
+      owner_name: nz(s.owner_name), email: nz(s.email), vat_id: nz(s.vat_id),
       address: nz(s.address), phone: nz(s.phone), opening_hours: nz(s.opening_hours),
       table_count: tables, updated_at: new Date().toISOString(),
     }).eq('id', 1)
@@ -60,6 +61,16 @@ export default function SettingsView({ notify }) {
           <input className={inputCls} type="tel" value={s.phone || ''} onChange={(e) => set('phone', e.target.value)} /></label>
         <label className="block"><span className="mb-1 block text-sm font-semibold">Öffnungszeiten</span>
           <textarea rows={4} className={inputCls} value={s.opening_hours || ''} onChange={(e) => set('opening_hours', e.target.value)} /></label>
+        <div className="border-t border-stone-200 pt-4">
+          <div className="font-bold">Impressum</div>
+          <div className="text-sm text-stone-500">Pflichtangaben für Impressum und Datenschutz im Gäste-Menü. Name, Adresse und Telefon kommen von oben.</div>
+        </div>
+        <label className="block"><span className="mb-1 block text-sm font-semibold">Inhaber/in bzw. Firma</span>
+          <input className={inputCls} placeholder="z. B. Maria Muster oder Muster GmbH" value={s.owner_name || ''} onChange={(e) => set('owner_name', e.target.value)} /></label>
+        <label className="block"><span className="mb-1 block text-sm font-semibold">E-Mail</span>
+          <input className={inputCls} type="email" value={s.email || ''} onChange={(e) => set('email', e.target.value)} /></label>
+        <label className="block"><span className="mb-1 block text-sm font-semibold">USt-IdNr. (falls vorhanden)</span>
+          <input className={inputCls} placeholder="DE123456789" value={s.vat_id || ''} onChange={(e) => set('vat_id', e.target.value)} /></label>
         <label className="block"><span className="mb-1 block text-sm font-semibold">Anzahl der Tische</span>
           <input className={inputCls} type="number" min="1" max="200" inputMode="numeric" value={s.table_count} onChange={(e) => set('table_count', e.target.value)} /></label>
         <button className={`${btnPrimary} w-full`} disabled={busy}>{busy ? 'Speichern …' : 'Speichern'}</button>

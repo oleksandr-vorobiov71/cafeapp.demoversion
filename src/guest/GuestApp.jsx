@@ -4,6 +4,7 @@ import { useMenu } from '../hooks/useMenu'
 import { useSettings } from '../hooks/useSettings'
 import { pick, formatPrice } from '../lib/i18n'
 import { orderErrorText } from '../lib/orderErrors'
+import { Impressum, Datenschutz } from './LegalPages'
 
 /* ------------------------------------------------------------------
    Demo-Fotos: nur Fallback, wenn in der Admin kein Foto hochgeladen ist.
@@ -372,6 +373,7 @@ export default function GuestApp() {
   const [sentOrder, setSentOrder] = useState(null) // { number }
   const [toast, setToast] = useState('')
   const [serviceOpen, setServiceOpen] = useState(false)
+  const [legal, setLegal] = useState(null) // null | 'impressum' | 'datenschutz'
   const [serviceBusy, setServiceBusy] = useState(false)
   const [serviceSent, setServiceSent] = useState(false)
   const [serviceError, setServiceError] = useState('')
@@ -651,6 +653,13 @@ export default function GuestApp() {
         ))}
       </main>
 
+      {/* Rechtliches */}
+      <footer className="mx-auto max-w-md px-4 pb-4 pt-2 text-center text-xs font-semibold text-stone-500">
+        <button type="button" onClick={() => setLegal('impressum')} className="underline-offset-2 hover:underline">Impressum</button>
+        <span className="mx-2 text-stone-300">·</span>
+        <button type="button" onClick={() => setLegal('datenschutz')} className="underline-offset-2 hover:underline">Datenschutz</button>
+      </footer>
+
       {/* Kurze Bestätigung beim Hinzufügen */}
       {toast && (
         <div className="fixed left-1/2 top-24 z-50 -translate-x-1/2 rounded-full bg-stone-900 px-4 py-2 text-xs font-bold text-white shadow-lg">
@@ -863,6 +872,22 @@ export default function GuestApp() {
           onPick={(num) => { setTable(num); setIsChangingTable(false) }}
           onClose={() => setIsChangingTable(false)}
         />
+      )}
+
+      {/* Impressum / Datenschutz */}
+      {legal && (
+        <div className="ga-backdrop fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-3 backdrop-blur-xs sm:items-center"
+             onMouseDown={(e) => e.target === e.currentTarget && setLegal(null)}>
+          <div className="ga-sheet flex max-h-[88vh] w-full max-w-md flex-col rounded-[28px] bg-white p-5 shadow-2xl">
+            <div className="flex items-center justify-between gap-3 border-b border-stone-100 pb-3">
+              <h3 className="text-lg font-black text-stone-900">{legal === 'impressum' ? 'Impressum' : 'Datenschutzerklärung'}</h3>
+              <CloseButton onClick={() => setLegal(null)} label={t.close} />
+            </div>
+            <div className="overflow-y-auto pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
+              {legal === 'impressum' ? <Impressum settings={settings} /> : <Datenschutz settings={settings} />}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Service-Fenster */}
