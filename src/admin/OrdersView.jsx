@@ -156,7 +156,7 @@ const CALL = {
   bill: { label: 'Möchte zahlen', icon: '💶' },
 }
 
-function ServiceCalls({ chime, notify }) {
+function ServiceCalls({ chime, notify, onCount }) {
   const [calls, setCalls] = useState([])
   const [now, setNow] = useState(Date.now())
   const known = useRef(null)
@@ -184,6 +184,9 @@ function ServiceCalls({ chime, notify }) {
     const tick = setInterval(() => setNow(Date.now()), 15000)
     return () => { supabase.removeChannel(channel); clearInterval(poll); clearInterval(tick) }
   }, [load])
+
+  // Anzahl offener Rufe nach oben melden (für die 30-Sekunden-Erinnerung)
+  useEffect(() => { if (onCount) onCount(calls.length) }, [calls.length, onCount])
 
   async function resolve(id) {
     const prev = calls
@@ -272,6 +275,16 @@ export default function OrdersView({ chime, onNewCount, notify }) {
     if (onNewCount) onNewCount(orders.filter((o) => o.status === 'new').length)
   }, [orders, onNewCount])
 
+  // Erinnerung: alle 30 Sekunden klingeln, solange neue Bestellungen oder Rufe offen sind
+  const [openCalls, setOpenCalls] = useState(0)
+  const pendingNew = orders.filter((o) => o.status === 'new').length
+  const hasPending = pendingNew + openCalls > 0
+  useEffect(() => {
+    if (!hasPending || !chime) return
+    const reminder = setInterval(chime, 30000)
+    return () => clearInterval(reminder)
+  }, [hasPending, chime])
+
   useEffect(() => {
     if (!keepAwake || !('wakeLock' in navigator)) return
     let lock
@@ -349,7 +362,7 @@ export default function OrdersView({ chime, onNewCount, notify }) {
 
   return (
     <section className="space-y-4">
-      <ServiceCalls chime={chime} notify={notify} />
+      <ServiceCalls chime={chime} notify={notify} onCount={setOpenCalls} />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         <div className="rounded-3xl border border-stone-200/80 bg-white p-4 shadow-2xs">
           <div className="text-[11px] font-bold uppercase tracking-wider text-stone-400">Umsatz heute <span className="normal-case tracking-normal">(ohne Trinkgeld)</span></div>
