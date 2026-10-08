@@ -448,32 +448,20 @@ export default function GuestApp() {
     setSubmitting(true)
     setSendError('')
     try {
-      const comment = splitCount > 1
-        ? `Geteilt durch ${splitCount} Personen (${formatPrice(perPerson)} p.P.)`
-        : null
-
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          table_number: parseInt(table, 10) || 1,
-          total_amount: total, // inkl. Trinkgeld; die Admin rechnet das Trinkgeld heraus
-          status: 'new',
-          payment_method: 'cash',
-          comment,
-        }])
-        .select()
-        .single()
-      if (orderError) throw orderError
-
-      const rows = cart.map((l) => ({
-        order_id: order.id,
-        item_name: itemsById[l.itemId]?.name_de || 'Artikel', // immer Deutsch fürs Personal
-        quantity: l.qty,
-        price: unitPrice(l), // Einzelpreis inkl. Extras
-        options_json: optionsForKitchen(l.opts),
-      }))
-      const { error: itemsError } = await supabase.from('order_items').insert(rows)
-      if (itemsError) throw itemsError
+      // Preise rechnet die DATENBANK aus (submit_order) – der Browser schickt nur, WAS bestellt wurde.
+      const { data, error } = await supabase.rpc('submit_order', {
+        p_table_number: parseInt(table, 10) || 1,
+        p_items: cart.map((l) => ({
+          menu_item_id: l.itemId,
+          quantity: l.qty,
+          options: optionsForKitchen(l.opts), // z. B. { Milch: 'Hafermilch' } – immer Deutsch
+        })),
+        p_tip_type: tipOption.type,
+        p_tip_value: tipOption.value || 0,
+        p_split: splitCount,
+      })
+      if (error) throw error
+      const order = { order_number: data?.order_number }
 
       setCart([])
       setTipOption(TIP_OPTIONS[0])
@@ -482,8 +470,13 @@ export default function GuestApp() {
       setSentOrder({ number: order.order_number })
     } catch (err) {
       console.error(err)
-      const offline = !navigator.onLine || /fetch|network/i.test(err?.message || '')
-      setSendError(orderErrorText({ code: offline ? 'NETWORK' : 'UNKNOWN' }, lang))
+      const msg = err?.message || ''
+      const known = msg.match(/^(ORDERS_DISABLED|INVALID_TABLE|ITEM_UNAVAILABLE)(?::\s*(.*))?/)
+      const offline = !navigator.onLine || /fetch|network/i.test(msg)
+      setSendError(orderErrorText(
+        known ? { code: known[1], detail: known[2] } : { code: offline ? 'NETWORK' : 'UNKNOWN' },
+        lang
+      ))
     } finally {
       setSubmitting(false)
     }
