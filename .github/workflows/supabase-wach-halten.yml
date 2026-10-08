@@ -1,0 +1,21 @@
+name: Supabase wach halten
+
+on:
+  schedule:
+    - cron: '17 6 */2 * *'   # alle 2 Tage um 06:17 UTC
+  workflow_dispatch:          # Knopf zum manuellen Starten
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Supabase anpingen
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/categories?select=id&limit=1" \
+            -H "apikey: $SUPABASE_KEY")
+          echo "Antwort von Supabase: $status"
+          test "$status" = "200"
